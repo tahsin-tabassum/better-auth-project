@@ -1,5 +1,5 @@
 import type { Category, Product } from "@/types/bazardor";
-import { preinit } from "react-dom";
+
 
 const BASE_URLS = ["https://openapi.programming-hero.com/api/bazardor", 
    " https://api.api-store.workers.dev/api/bazardor" ,
@@ -26,7 +26,7 @@ async function fetchAPI <T>(endpoint:string): Promise <T> {
         }
     }
 
-throw lastError ?? newError ("Both Bazardor APIs failed.");
+throw lastError ?? new Error ("Both Bazardor APIs failed.");
 
 }
 
@@ -49,8 +49,8 @@ return [];
 
 
 function getText(
-    obj: Record<string, unknown>;
-    keys: string [];
+    obj: Record<string, unknown>,
+    keys: string [],
     fallback = " "
 ): string {
     for (const key of keys) {
@@ -139,7 +139,7 @@ return {
     icon: getText (item, ["icon", "emoji"], "🛒" ),
     category: getText(item, ["categoryId"]),
     unit: getText(item, ["unit", "unitBn", "priceUnit"], "প্রতি কেজি"),
-    price, 
+    price:String(price), 
     previousPrice,
     change,
     description: getText(item, ["description", "descriptionBn"]),
@@ -201,7 +201,7 @@ const price = getNumber(obj, [
       category: getText(obj, ["category", "categorySlug"]),
       categoryId: getText(obj, ["categoryId"]),
       unit: getText(obj, ["unit", "unitBn", "priceUnit"], "প্রতি কেজি"),
-      price,
+      price:String(price),
       previousPrice,
       change: Number.isFinite(explicitChange)
         ? explicitChange
