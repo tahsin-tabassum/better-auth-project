@@ -1,44 +1,37 @@
-import Link from "next/link";
 import type {Product} from "@/types/bazardor";
-import {bnNumber, formatChange, formatPrice } from "@/lib/format";
+import {formatChange, formatPrice } from "@/lib/format";
 
 
-export default function ProductCard ({
-    product, 
+export default function PriceTicker ({
+    products,
 }:{
-    product: Product;
+    products: Product[];
 }) {
-    const changeColor = product.change > 0 ? "bg-red-50 text-red-600"
-    : product.change < 0
- ? "bg-green-50 text-green-700"
-   : "bg-gray-100 text-gray-600";
+    if (!products.length) return null;
+    const items = [...products, ...products];
 
-return (
-    <Link  href={`/products/${product.id}`} className="group rounded-2xl border border-gray-200 bg-white p-4 transition hover:-translate-y-1 hover:border-green-300 hover:shadow-lg">
-    <div className="flex h-28 items-center justify-center rounded-xl bg-green-50 text-5xl">
-{product.icon}
-    </div>
+return(
+<div className="overflow-hidden bg-green-950 py-3 text-white"> 
+<div className="ticker-track flex w-max items-center gap-8">
+{
+    items.map((product, index) => (
+    <div key={`${product.id}-${index}`}
+    className="flex items-center gap-2 whitespace-nowrap text-sm">
+<span>{product.icon}</span>
+<span>{product.nameBn}</span>
+<span className="font-semibold">
+    {formatPrice(product.price)}
+</span>
+<span className={product.change > 0  ? "text-red-300"
+     : product.change < 0
+     ? "text-green-300"
+    :"text-gray-300"}>
 
-    <h3 className="mt-4 font-bold text-gray-900 group-hover:text-green-700">
- {product.nameBn}
-    </h3>
-    <p className="mt-1 text-sm text-gray-500">
-{product.unit}
-    </p>
-    <div className="mt-4 flex items-end justify-between gap-2">
-<div>
-    <p className="text-xs text-gray-500 ">আজকের দাম</p>
-    <p className="mt-1 font-bold text-gray-900">
-            {formatPrice(product.price)}
-          </p>
-</div>
-
-<span className={`rounded-full px-2 py-1 text-xs font-semibold ${changeColor}`}>
-{formatChange(product.change)}
 </span>
     </div>
-    </Link>
-);
-
-
+    ))
+}
+</div>
+</div>
+)
 }
