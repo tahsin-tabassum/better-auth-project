@@ -26,12 +26,12 @@ return(
      : product.change < 0
      ? "text-green-300"
     :"text-gray-300"}>
-
+{formatChange(product.change)}
 </span>
     </div>
     ))
 }
 </div>
 </div>
-)
+);
 }
