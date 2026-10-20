@@ -1,22 +1,28 @@
 export type Category = {
     id: string;
+    slug: string;
     nameBn: string;
     icon: string;
 };
 
-export type Product ={
+export type Product = {
     id: string | number;
     nameBn : string ;
-    slug?: string ;
+    slug: string ;
     icon: string ;
-    category?:string;
-    categoryId?:string ;
+    category:string;
+    categoryName?:string ;
     unit:string ;
-    price : string ;
+    price : number ;
     previousPrice?: number;
     change:number;
     description?: string ;
+      minPrice?: number;
+  maxPrice?: number;
+  averagePrice?: number;
+  marketPrices?: {
+    market: string;
+    price: number;
+     }[];
 };
 
-
-export type ApiProduct = Record<string, unknown>;

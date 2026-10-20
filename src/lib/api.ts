@@ -1,217 +1,235 @@
+
 import type { Category, Product } from "@/types/bazardor";
 
+const API_URLS = [
+  process.env.MAIN_API_URL,
+  process.env.BASE_URL_2,
+  process.env.BASE_URL_1,
+].filter((url): url is string => Boolean(url));
 
-const BASE_URLS = ["https://openapi.programming-hero.com/api/bazardor", 
-   " https://api.api-store.workers.dev/api/bazardor" ,
-    
-];
+type ApiRecord = Record<string, unknown>;
 
-async function fetchAPI <T>(endpoint:string): Promise <T> {
-    let lastError: unknown;
-
-    for (const baseUrl of BASE_URLS){
-        try {
-            const response = await fetch (`${baseUrl}${endpoint}` , {
-                next: {revalidate: 300},
-
-            });
-            if (!response.ok) {
-                throw new Error (`Request failed: ${response.status}`);
-            }
-
-            return (await response.json()) as T;
-        }
-        catch(error){
-            lastError = error;
-        }
-    }
-
-throw lastError ?? new Error ("Both Bazardor APIs failed.");
-
-}
-
-
-function unwrapArray(data:unknown): Record<string, unknown> [] {
-     if (Array.isArray(data)){
-        return data as Record<string, unknown> [] ;
-     }
-
-if (data && typeof data === "object"){
-    const obj = data as Record<string, unknown>;
-    for (const key of ["data", "products", "categories", "results"]){
-        if (Array.isArray(obj[key])){
-            return obj[key] as Record<string, unknown> [] ;
-        }
-    }
-}
-return [];  
-}
-
-
-function getText(
-    obj: Record<string, unknown>,
-    keys: string [],
-    fallback = " "
-): string {
-    for (const key of keys) {
-        const value = obj[key];
-        if (typeof value === "string" || typeof value === "number"){
-            return String(value);
-        }
-    }
-    return fallback;
-}
-
-function getNumber(
-  obj: Record<string, unknown>,
+function first(
+  obj: ApiRecord,
   keys: string[],
-  fallback = 0
-): number {
-    for (const key of keys) {
-        const value = obj[key];
-      
-        if(typeof value === "number" && Number.isFinite(value)) {
-            return value;
-        }
-        if (typeof value === "string" && value.trim() !== "") {
-            const parsed = Number(value.replace(/,/g,""));
-            if (Number.isFinite(parsed)) return parsed;
-        }
+  fallback: unknown = undefined,
+): unknown {
+  for (const key of keys) {
+    if (obj[key] !== undefined && obj[key] !== null) {
+      return obj[key];
     }
-    return fallback;
+  }
+
+  return fallback;
 }
 
-export async function getCategories(): Promise<Category[]> {
-const data = await fetchAPI<unknown>("/categories");
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
 
-return unwrapArray(data).map((item) => ({
-    id: getText(item, ["id", "slug"]),
-    slug: getText(item, [ "slug", "id"]),
-    nameBn: getText(item, ["nameBn", "name", "title"], "নাম নেই"),
-    icon: getText(item, ["icon", "emoji"], "🛒"),
-}));
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(/[৳,\s]/g, ""));
+    if (Number.isFinite(parsed)) return parsed;
+  }
 
+  return fallback;
 }
 
+function toString(value: unknown, fallback = ""): string {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : fallback;
+}
 
-export async function getProducts(
-    category?: string
+function unwrapResponse(data: unknown): unknown {
+  if (Array.isArray(data)) return data;
 
-): Promise<Product[]>
-{
-    const endpoint= category ? `/products?category=${encodeURIComponent(category)}`:"/products";
+  if (data && typeof data === "object") {
+    const obj = data as ApiRecord;
 
-    const data = await fetchAPI<unknown> (endpoint);
+    for (const key of ["data", "products", "categories", "result"]) {
+      if (obj[key] !== undefined) {
+        const nested = obj[key];
 
-    return unwrapArray(data).map((item)=> {
-        const price = getNumber(item , [
-            "price", 
-            "currentPrice",
-      "priceToday",
-      "todayPrice",
-        ]);
+        if (Array.isArray(nested)) return nested;
 
-        const previousPrice = getNumber(item, [
-            "previousPrice", 
-            "oldPrice",
-      "yesterdayPrice",
-      "priceYesterday",
-        ]);
+        if (nested && typeof nested === "object") {
+          return nested;
+        }
+      }
+    }
+  }
 
-        const explicitChange = getNumber(item, [
-            "change",
-             "changePercent",
-      "priceChange",
-      "percentageChange",
-        ], Number.NaN);
-    
-const change = Number.isFinite (explicitChange)
-? explicitChange:
-previousPrice>0 ? ((price - previousPrice)/ previousPrice)* 100: 0;
+  return data;
+}
 
-return {
-    id: getText(item, ["id", "_id", "slug"]),
-    nameBn: getText(
-        item, ["nameBn",  "name", "title", "productName"], "নাম নেই"
+async function fetchAPI<T>(endpoint: string): Promise<T> {
+  if (API_URLS.length === 0) {
+    throw new Error(
+      "API URL missing. Add MAIN_API_URL, BASE_URL_2 and BASE_URL_1 to .env.local.",
+    );
+  }
 
+  let lastError: unknown;
+
+  for (const baseUrl of API_URLS) {
+    try {
+      const response = await fetch(
+        `${baseUrl.replace(/\/+$/, "")}${endpoint}`,
+        {
+          cache: "no-store",
+          signal: AbortSignal.timeout(8000),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${endpoint}`);
+      }
+
+      const json: unknown = await response.json();
+      return unwrapResponse(json) as T;
+    } catch (error) {
+      lastError = error;
+      console.error(`API request failed: ${baseUrl}${endpoint}`, error);
+    }
+  }
+
+  throw new Error(`Unable to fetch ${endpoint}`, {
+    cause: lastError,
+  });
+}
+
+/* Normalize one category */
+export function normalizeCategory(value: unknown): Category {
+  const obj = (value ?? {}) as ApiRecord;
+
+  const id = toString(
+    first(obj, ["id", "_id", "slug", "categoryId"], "unknown"),
+  );
+
+  return {
+    ...obj,
+    id,
+    slug: toString(first(obj, ["slug", "id", "_id"], id)),
+    nameBn: toString(
+      first(obj, ["nameBn", "name_bn", "name", "categoryName", "title"]),
+      "অন্যান্য",
     ),
-    slug: getText(item, ["slug"]),
-    icon: getText (item, ["icon", "emoji"], "🛒" ),
-    category: getText(item, ["categoryId"]),
-    unit: getText(item, ["unit", "unitBn", "priceUnit"], "প্রতি কেজি"),
-    price:String(price), 
+    icon: toString(first(obj, ["icon", "emoji"], "🛒")),
+  } as Category;
+}
+
+/* Normalize one product */
+export function normalizeProduct(value: unknown): Product {
+  const obj = (value ?? {}) as ApiRecord;
+
+  const id = first(obj, ["id", "_id", "productId"], "unknown");
+  const name = toString(
+    first(obj, ["nameBn", "name_bn", "name", "productName", "title"]),
+    "পণ্যের নাম নেই",
+  );
+
+  const categoryValue = first(
+    obj,
+    ["category", "categoryId", "categorySlug"],
+    "",
+  );
+
+  const category =
+    typeof categoryValue === "object" && categoryValue !== null
+      ? toString(
+          first(categoryValue as ApiRecord, ["slug", "id", "nameBn", "name"]),
+        )
+      : toString(categoryValue);
+
+  const price = toNumber(
+    first(obj, ["price", "currentPrice", "todayPrice", "priceToday"]),
+  );
+
+  const previousPrice = toNumber(
+    first(obj, ["previousPrice", "oldPrice", "yesterdayPrice", "lastPrice"]),
+    price,
+  );
+
+  const change = toNumber(
+    first(obj, ["change", "changePercent", "priceChange"]),
+    previousPrice === 0
+      ? 0
+      : ((price - previousPrice) / previousPrice) * 100,
+  );
+
+  return {
+    ...obj,
+    id: typeof id === "number" ? id : String(id),
+    slug: toString(first(obj, ["slug"], String(id))),
+    nameBn: name,
+    icon: toString(first(obj, ["icon", "emoji"], "🛒")),
+    category,
+    categoryId: category,
+    unit: toString(first(obj, ["unit", "unitName"], "কেজি")),
+    price,
     previousPrice,
     change,
-    description: getText(item, ["description", "descriptionBn"]),
-};
-    });
+  } as Product;
 }
 
+/* Get all categories */
+export async function getCategories(): Promise<Category[]> {
+  const data = await fetchAPI<unknown>("/categories");
+  const result = unwrapResponse(data);
+
+  if (!Array.isArray(result)) {
+    throw new Error("Categories API did not return an array.");
+  }
+
+  return result.map(normalizeCategory);
+}
+
+/* Get all products or products in one category */
+export async function getProducts(
+  category?: string,
+): Promise<Product[]> {
+  const endpoint = category
+    ? `/products?category=${encodeURIComponent(category)}`
+    : "/products";
+
+  const data = await fetchAPI<unknown>(endpoint);
+  const result = unwrapResponse(data);
+
+  if (!Array.isArray(result)) {
+    throw new Error("Products API did not return an array.");
+  }
+
+  return result.map(normalizeProduct);
+}
+
+/* Get one product by ID or slug */
 export async function getProduct(
-    id: string
-): Promise<Product|null> {
-    try{
-        const data = await fetchAPI<unknown>(
-             `/products/${encodeURIComponent(id)}`
-        );
+  id: string,
+): Promise<Product | null> {
+  try {
+    const data = await fetchAPI<unknown>(
+      `/products/${encodeURIComponent(id)}`,
+    );
 
-const item = data && typeof data === "object" && !Array.isArray(data)?
-((data as Record<string, unknown>).data ?? data)
-: data;
+    const result = unwrapResponse(data);
 
-if(!item || typeof item !== "object") return null;
-
-const obj = item as Record<string, unknown>;
-const product = (await getProducts()).find(
-(p) => String(p.id) ===id
-);
-
-
-if(!("id" in obj) && product) return product;
-
-const price = getNumber(obj, [
-   "price",
-      "currentPrice",
-      "priceToday",
-      "todayPrice", 
-]);
- const previousPrice = getNumber(obj, [
-      "previousPrice",
-      "oldPrice",
-      "yesterdayPrice",
-      "priceYesterday",
-    ]);
-
-    const explicitChange = getNumber(obj, [
-      "change",
-      "changePercent",
-      "priceChange",
-      "percentageChange",
-    ], Number.NaN);
-
- return {
-      id: getText(obj, ["id", "_id", "slug"], id),
-      nameBn: getText(
-        obj,
-        ["nameBn", "name", "title", "productName"],
-        "নাম নেই"
-      ),
-      slug: getText(obj, ["slug"]),
-      icon: getText(obj, ["icon", "emoji"], "🛒"),
-      category: getText(obj, ["category", "categorySlug"]),
-      categoryId: getText(obj, ["categoryId"]),
-      unit: getText(obj, ["unit", "unitBn", "priceUnit"], "প্রতি কেজি"),
-      price:String(price),
-      previousPrice,
-      change: Number.isFinite(explicitChange)
-        ? explicitChange
-        : previousPrice > 0
-          ? ((price - previousPrice) / previousPrice) * 100
-          : 0,
-      description: getText(obj, ["description", "descriptionBn"]),
-    };
-
-    } catch {
-        return null;
+    if (Array.isArray(result)) {
+      const match = result[0];
+      return match ? normalizeProduct(match) : null;
     }
+
+    if (!result || typeof result !== "object") {
+      return null;
+    }
+
+    return normalizeProduct(result);
+  } catch (error) {
+    console.error(`Failed to get product ${id}:`, error);
+    return null;
+  }
 }
+
+    
+

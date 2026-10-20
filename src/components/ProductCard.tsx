@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type {Product} from "@/types/bazardor";
-import {bnNumber, formatChange, formatPrice } from "@/lib/format";
+import { formatChange, formatPrice } from "@/lib/format";
 
 
 export default function ProductCard ({
@@ -8,35 +8,44 @@ export default function ProductCard ({
 }:{
     product: Product;
 }) {
-    const changeColor = product.change > 0 ? "bg-red-50 text-red-600"
+    const trend = product.change > 0 ? "up"
     : product.change < 0
- ? "bg-green-50 text-green-700"
-   : "bg-gray-100 text-gray-600";
+ ? "down"
+   : "flat";
 
 return (
-    <Link  href={`/products/${product.id}`} className="group rounded-2xl border border-gray-200 bg-white p-4 transition hover:-translate-y-1 hover:border-green-300 hover:shadow-lg">
-    <div className="flex h-28 items-center justify-center rounded-xl bg-green-50 text-5xl">
-{product.icon}
-    </div>
-
-    <h3 className="mt-4 font-bold text-gray-900 group-hover:text-green-700">
- {product.nameBn}
-    </h3>
-    <p className="mt-1 text-sm text-gray-500">
-{product.unit}
-    </p>
-    <div className="mt-4 flex items-end justify-between gap-2">
-<div>
-    <p className="text-xs text-gray-500 ">আজকের দাম</p>
-    <p className="mt-1 font-bold text-gray-900">
-            {formatPrice(product.price)}
-          </p>
+    <Link  href={`/product/${encodeURIComponent(
+        product.slug || String(product.id),
+      )}`}  className="product-card group">
+    
+<div className="product-card-top">
+<div className="product-icon" aria-hidden="true">
+    {product.icon}
 </div>
 
-<span className={`rounded-full px-2 py-1 text-xs font-semibold ${changeColor}`}>
-{formatChange(product.change)}
-</span>
+<div className="min-w-0 flex-1">
+ <h3 className="product-name">
+ {product.nameBn}
+    </h3>
+    <p className="product-unit">
+{product.unit}
+    </p>
+</div>
+</div>
+
+<div className="product-price-row">
+    <div>
+        <p className="price-label">আজকের দাম</p>
+          <p className="product-price">
+            {formatPrice(product.price)}
+          </p>
     </div>
+
+
+   <span className={`change-badge ${trend}`}>
+    {formatChange(product.change)}
+   </span>
+   </div>
     </Link>
 );
 }
