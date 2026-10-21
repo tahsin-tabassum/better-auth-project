@@ -1,59 +1,51 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getCategories, getProducts } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
 import type { Product } from "@/types/bazardor";
 import { bnNumber } from "@/lib/format";
 import HeroSection from "@/components/HeroSection";
-
-export default async function HomePage() {
- let products:Product[] = [];
- let categories: Awaited<ReturnType<typeof getCategories>> = [];
-  try{
-    [products, categories ]= await Promise.all([
-      getProducts(),
-      getCategories(),
-    ]);
-
- } catch {
-   //  
- }
- const rising = [...products]
- .filter ((product) => product.change>0)     
-.sort ((a, b) => b.change - a.change)
-.slice (0, 6);
-
-const falling = [...products]
- .filter((product) => product.change < 0)
-    .sort((a, b) => a.change - b.change)
-    .slice(0, 6);
-
-    return (
-     <div className="site-container page-space">
-<section className="hero-banner">
-   <div className="hero-copy">
-      <span className="eyebrow">
-                     📈 নির্ভরযোগ্য বাজারদর, প্রতিদিন
-<h1>আজকের বাজারের দাম এক নজরে</h1>
-
-          <p>
-            চাল, ডাল, তেল, সবজি, মাছসহ নিত্যপ্রয়োজনীয়
-            পণ্যের আপডেটেড দাম সহজেই দেখে নিন।
-          </p>
-          <a href="#সব-পণ্য" className="btn-primary hero-button">
-             সব পণ্য দেখুন <span>→</span>
-          </a>
-      </span>
-   </div>
-
-<div className="hero-art" aria-hidden="true">
-<div className="basket-emoji">🧺</div>
-<div className="produce-emoji">🍅 🥕 🥦 🍊</div>
-</div>
+import ProductSections from "@/components/ProductSection";
 
 
+async function ProductsContent() {
+  const products = await getProducts();
 
-</section>
-     </div>
-
-    );
+  return <ProductSections products={products} />;
 }
+
+function ProductsSkeleton() {
+  return (
+    <div className="bg-[#F0F6F1] px-4 py-10">
+      <div className="mx-auto max-w-[1140px] space-y-10">
+        {[1, 2, 3].map((section) => (
+          <div key={section}>
+            <div className="mb-5 h-6 w-40 animate-pulse rounded bg-gray-200" />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((card) => (
+                <div
+                  key={card}
+                  className="h-[155px] animate-pulse rounded-xl bg-white"
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <main>
+      <HeroSection />
+
+      <Suspense fallback={<ProductsSkeleton />}>
+        <ProductsContent />
+      </Suspense>
+    </main>
+  );
+}
+

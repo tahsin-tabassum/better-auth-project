@@ -27,10 +27,10 @@ export default async function RootLayout({ children, }: Readonly<{children: Reac
     >
       <body>    
    <Navbar />
-   <HeroSection />
-   <Footer />
       <PriceTicker products={products} />
     <main className="main-content">{children}</main>
+  
+   <Footer />
    </body>
     </html>
   );
