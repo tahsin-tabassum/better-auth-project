@@ -47,6 +47,7 @@ className="rounded-lg border border-green-700 px-4 py-2 text-sm font-semibold te
            {category.icon} {category.nameBn}
             </Link>
         ))}
+        
 </nav>
     </header>
 );
