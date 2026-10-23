@@ -17,7 +17,7 @@ async function ProductsContent() {
 function ProductsSkeleton() {
   return (
     <div className="bg-[#F0F6F1] px-4 py-10">
-      <div className="mx-auto max-w-[1140px] space-y-10">
+      <div className="mx-auto max-w-285 space-y-10">
         {[1, 2, 3].map((section) => (
           <div key={section}>
             <div className="mb-5 h-6 w-40 animate-pulse rounded bg-gray-200" />
@@ -26,7 +26,7 @@ function ProductsSkeleton() {
               {[1, 2, 3, 4, 5, 6].map((card) => (
                 <div
                   key={card}
-                  className="h-[155px] animate-pulse rounded-xl bg-white"
+                  className="h-38.75 animate-pulse rounded-xl bg-white"
                 />
               ))}
             </div>

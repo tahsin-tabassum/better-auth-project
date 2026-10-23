@@ -1,69 +1,76 @@
-import Link from "next/link";
-import type {Product} from "@/types/bazardor";
 
+import Link from "next/link";
+import type { Product } from "@/types/bazardor";
 
 type Props = {
-    product: Product;
+  product: Product;
 };
 
+export default function ProductCard({ product }: Props) {
+  const today = Number(product.today ?? product.price);
+  const yesterday = Number(
+    product.yesterday ?? product.previousPrice
+  );
 
-export default function ProductCard({ product}: Props){
-    const price = Number(product.price) || 0;
-    const change = Number(product.change) || 0;
-const isUp = change > 0;
-const isDown = change < 0;
+  const change =
+    Number.isFinite(today) &&
+    Number.isFinite(yesterday) &&
+    yesterday > 0
+      ? ((today - yesterday) / yesterday) * 100
+      : Number(product.change) || 0;
 
-const changeText = Math.abs(change).toLocaleString("bn-BD",{
-    maximumFractionDigits: 1 ,
-});
+  const increased = change > 0;
+  const decreased = change < 0;
 
-return (
+  const changeText = Math.abs(change).toLocaleString("bn-BD", {
+    maximumFractionDigits: 1,
+  });
+
+  return (
     <Link
-      href={`/product/${product.slug || product.id}`}
-      className="group block rounded-xl border border-[#E4EBE5] bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#A7D6B5] hover:shadow-md"
+      href={`/product/${product.id}`}
+      className="group block rounded-2xl border border-[#E1E9E2] bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#A7D9B3] hover:shadow-md"
     >
-<div className="flex items-start gap-3">
-<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F2F7F3] text-[24px]">
-{product.icon || "🛒"}
-</div>
+      <div className="flex items-start gap-4">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#F0F6F1] text-2xl">
+          {product.icon}
+        </div>
 
-        <div className="min-w-0">
-          <h3 className="truncate text-[15px] font-bold text-[#253027]">
+        <div>
+          <h3 className="text-sm font-bold text-[#253027]">
             {product.nameBn}
           </h3>
-          <p className="mt-0.5 text-[11px] text-[#7B857D]">
+
+          <p className="text-sm text-[#849087]">
             প্রতি {product.unit}
           </p>
-</div>
-</div>
+        </div>
+      </div>
 
-{/* Product price */}
-      <div className="mt-5 flex items-end justify-between gap-2">
+      <div className="mt-7 flex items-end justify-between">
         <div>
-          <p className="mb-1 text-[11px] text-[#7B857D]">
+          <p className="mb-1 text-sm text-[#89958B]">
             আজকের দাম
           </p>
 
-          <p className="text-[20px] font-extrabold leading-none text-[#253027]">
-            {price.toLocaleString("bn-BD")}{" "}
-            <span className="text-[12px] font-semibold">টাকা</span>
+          <p className="text-sm font-extrabold text-[#253027]">
+            {today.toLocaleString("bn-BD")} টাকা
           </p>
         </div>
 
-<span className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
-    isUp ? "bg-[#FFF1F1] text-[#E44747]"
-     : isDown
-     ? "bg-[#EAF8EF] text-[#159B55]"
-  : "bg-[#F0F2F0] text-[#7D857E]"
-} `}>
-{isUp ? "▲" : isDown ? "▼" : "—"} {changeText}%
-</span>
-
-        </div>
-
+        <span
+          className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+            increased
+              ? "bg-red-50 text-red-500"
+              : decreased
+                ? "bg-green-50 text-green-600"
+                : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          {increased ? "▲ " : decreased ? "▼ " : "— "}
+          {changeText}%
+        </span>
+      </div>
     </Link>
-
-)
-
-
+  );
 }

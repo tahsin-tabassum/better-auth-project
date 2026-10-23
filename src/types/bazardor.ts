@@ -1,28 +1,38 @@
+
 export type Category = {
-    id: string;
-    slug: string;
-    nameBn: string;
-    icon: string;
+  id: string | number;
+  slug: string;
+  nameBn: string;
+  icon: string;
+  description?: string;
+};
+
+export type Market = {
+  market: string;
+  division: string;
+  min: number;
+  max: number;
 };
 
 export type Product = {
-    id: string | number;
-    nameBn : string ;
-    slug: string ;
-    icon: string ;
-    category:string;
-    categoryName?:string ;
-    unit:string ;
-    price : number ;
-    previousPrice?: number;
-    change:number;
-    description?: string ;
-      minPrice?: number;
-  maxPrice?: number;
-  averagePrice?: number;
-  marketPrices?: {
-    market: string;
-    price: number;
-     }[];
-};
+  id: string | number;
+  slug: string;
+  nameBn: string;
+  category: string;
+  categoryNameBn?: string;
+  categoryIcon?: string;
+  icon: string;
+  image?: string;
+  unit: string;
 
+  price: number;
+  previousPrice: number;
+  change: number;
+
+  today: number;
+  yesterday: number;
+  lastWeek?: number;
+  lastMonth?: number;
+
+  markets: Market[];
+};

@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
 
-@keyframes bazardor-scroll {
+
+/* BazarDor PriceTicker Animation */
+
+@keyframes bazardor-ticker-scroll {
   from {
     transform: translateX(0);
   }
@@ -11,19 +14,18 @@
   }
 }
 
-.bazardor-ticker {
-  animation: bazardor-scroll 35s linear infinite;
+.bazardor-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: bazardor-ticker-scroll 30s linear infinite;
+  will-change: transform;
 }
 
-.bazardor-ticker:hover {
+.bazardor-ticker-track:hover {
   animation-play-state: paused;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bazardor-ticker {
-    animation: none;
-  }
-}
+
 
 
 

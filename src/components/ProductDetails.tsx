@@ -138,7 +138,7 @@ subtitle="সবচেয়ে বেশি দামের বাজার"
 </h2>
 
 <div className="overflow-x-auto rounded-xl border border-[#E0E9E1]">
-<table className="w-full min-w-[650px] border-collapse text-left text-[13px]">
+<table className="w-full min-w-162.5 border-collapse text-left text-[13px]">
  <thead className="bg-[#F9FCF9] text-[#69766C]">
 
     <tr>

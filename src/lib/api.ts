@@ -1,11 +1,9 @@
 
-import type { Category, Product } from "@/types/bazardor";
+import type { Category, Product, Market } from "@/types/bazardor";
 
-const API_URLS = [
-  process.env.MAIN_API_URL,
-  process.env.BASE_URL_2,
-  process.env.BASE_URL_1,
-].filter((url): url is string => Boolean(url));
+const API_URL =
+  process.env.MAIN_API_URL ||
+  "https://openapi.programming-hero.com/api/bazardor";
 
 type ApiRecord = Record<string, unknown>;
 
@@ -48,7 +46,12 @@ function unwrapResponse(data: unknown): unknown {
   if (data && typeof data === "object") {
     const obj = data as ApiRecord;
 
-    for (const key of ["data", "products", "categories", "result"]) {
+    for (const key of [
+      "data",
+      "products",
+      "categories",
+      "result",
+    ]) {
       if (obj[key] !== undefined) {
         const nested = obj[key];
 
@@ -65,40 +68,24 @@ function unwrapResponse(data: unknown): unknown {
 }
 
 async function fetchAPI<T>(endpoint: string): Promise<T> {
-  if (API_URLS.length === 0) {
+  const url = `${API_URL.replace(/\/+$/, "")}${endpoint}`;
+
+  const response = await fetch(url, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
     throw new Error(
-      "API URL missing. Add MAIN_API_URL, BASE_URL_2 and BASE_URL_1 to .env.local.",
+      `API Error: ${response.status} ${response.statusText}`
     );
   }
 
-  let lastError: unknown;
+  const json: unknown = await response.json();
 
-  for (const baseUrl of API_URLS) {
-    try {
-      const response = await fetch(
-        `${baseUrl.replace(/\/+$/, "")}${endpoint}`,
-        {
-          cache: "no-store",
-          signal: AbortSignal.timeout(8000),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${endpoint}`);
-      }
-
-      const json: unknown = await response.json();
-      return unwrapResponse(json) as T;
-    } catch (error) {
-      lastError = error;
-      console.error(`API request failed: ${baseUrl}${endpoint}`, error);
-    }
-  }
-
-  throw new Error(`Unable to fetch ${endpoint}`, {
-    cause: lastError,
-  });
+  return unwrapResponse(json) as T;
 }
+
 
 /* Normalize one category */
 export function normalizeCategory(value: unknown): Category {
@@ -121,57 +108,91 @@ export function normalizeCategory(value: unknown): Category {
 }
 
 /* Normalize one product */
+
 export function normalizeProduct(value: unknown): Product {
   const obj = (value ?? {}) as ApiRecord;
 
   const id = first(obj, ["id", "_id", "productId"], "unknown");
-  const name = toString(
-    first(obj, ["nameBn", "name_bn", "name", "productName", "title"]),
-    "পণ্যের নাম নেই",
+
+  const today = toNumber(
+    first(obj, ["today", "price", "currentPrice", "todayPrice"])
   );
 
-  const categoryValue = first(
-    obj,
-    ["category", "categoryId", "categorySlug"],
-    "",
+  const yesterday = toNumber(
+    first(obj, [
+      "yesterday",
+      "previousPrice",
+      "oldPrice",
+      "yesterdayPrice",
+    ]),
+    today
   );
 
-  const category =
-    typeof categoryValue === "object" && categoryValue !== null
-      ? toString(
-          first(categoryValue as ApiRecord, ["slug", "id", "nameBn", "name"]),
-        )
-      : toString(categoryValue);
+  const rawChange = obj.change;
 
-  const price = toNumber(
-    first(obj, ["price", "currentPrice", "todayPrice", "priceToday"]),
-  );
+  let change = 0;
 
-  const previousPrice = toNumber(
-    first(obj, ["previousPrice", "oldPrice", "yesterdayPrice", "lastPrice"]),
-    price,
-  );
+  if (
+    rawChange &&
+    typeof rawChange === "object" &&
+    !Array.isArray(rawChange)
+  ) {
+    const changeObj = rawChange as ApiRecord;
 
-  const change = toNumber(
-    first(obj, ["change", "changePercent", "priceChange"]),
-    previousPrice === 0
-      ? 0
-      : ((price - previousPrice) / previousPrice) * 100,
-  );
+    const percentage = toNumber(changeObj.pct);
+
+    if (changeObj.dir === "up") {
+      change = percentage;
+    } else if (changeObj.dir === "down") {
+      change = -percentage;
+    }
+  } else {
+    change = toNumber(
+      first(obj, ["changePercent", "priceChange"]),
+      yesterday === 0
+        ? 0
+        : ((today - yesterday) / yesterday) * 100
+    );
+  }
+
+  const markets: Market[] = Array.isArray(obj.markets)
+    ? obj.markets.map((item: unknown) => {
+        const market = item as ApiRecord;
+
+        return {
+          market: toString(market.market),
+          division: toString(market.division),
+          min: toNumber(market.min),
+          max: toNumber(market.max),
+        };
+      })
+    : [];
 
   return {
-    ...obj,
     id: typeof id === "number" ? id : String(id),
     slug: toString(first(obj, ["slug"], String(id))),
-    nameBn: name,
-    icon: toString(first(obj, ["icon", "emoji"], "🛒")),
-    category,
-    categoryId: category,
-    unit: toString(first(obj, ["unit", "unitName"], "কেজি")),
-    price,
-    previousPrice,
+    nameBn: toString(first(obj, ["nameBn", "name"]), "পণ্যের নাম নেই"),
+
+    category: toString(obj.category),
+    categoryNameBn: toString(obj.categoryNameBn),
+    categoryIcon: toString(obj.categoryIcon),
+
+    icon: toString(first(obj, ["image", "icon", "emoji"]), "🛒"),
+    image: toString(first(obj, ["image", "icon", "emoji"]), "🛒"),
+
+    unit: toString(obj.unit, "kg"),
+
+    price: today,
+    previousPrice: yesterday,
     change,
-  } as Product;
+
+    today,
+    yesterday,
+    lastWeek: toNumber(obj.lastWeek),
+    lastMonth: toNumber(obj.lastMonth),
+
+    markets,
+  };
 }
 
 /* Get all categories */
