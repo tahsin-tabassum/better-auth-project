@@ -41,31 +41,29 @@ return () => {
 };
  },[]);
 
+
 async function handleSignOut() {
-    if( preview) {
-        setOpen (false);
-    return;
-    }
-    setLoading(true);
+  setLoading(true);
 
-    try{
-        const result = await authClient.signOut();
-    
-        if(result.error){
-            alert(result.error.message ||"সাইন আউট করা যায়নি।" );
-            return;
-        }
-      setOpen(false);
-      router.push("/signin");
-      router.refresh();       
-    } catch{
-        alert("সাইন আউট করা যায়নি।");
-    } finally {
-        setLoading(false);
+  try {
+    const result = await authClient.signOut();
+
+    if (result.error) {
+      alert(result.error.message || "সাইন আউট করা যায়নি।");
+      return;
     }
 
-    
+    setOpen(false);
+    router.push("/signin");
+    router.refresh();
+  } catch {
+    alert("সাইন আউট করা যায়নি।");
+  } finally {
+    setLoading(false);
+  }
 }
+  
+
 
 return(
     <div ref={dropdownRef} className="relative">

@@ -131,7 +131,7 @@ className="w-full rounded-lg bg-[#008C45] py-3 text-[14px] font-semibold text-wh
 </button>
 </div>
 <p className="mt-5 text-center text-[12px] text-[#68736A]">  অ্যাকাউন্ট নেই?{" "}
-   <Link href="/signin" className="font-semibold text-[#008C45] hover:underline">  সাইন আপ করুন  </Link>
+   <Link href="/signup" className="font-semibold text-[#008C45] hover:underline">  সাইন আপ করুন  </Link>
  </p>
 </div>
 
